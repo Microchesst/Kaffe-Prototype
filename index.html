@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KaffeBot Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for chat bubbles */
+        .chat-bubble {
+            max-width: 75%;
+            padding: 8px 12px;
+            border-radius: 18px;
+            margin-bottom: 8px;
+            word-wrap: break-word;
+        }
+        .bot-bubble {
+            background-color: #e5e7eb; /* gray-200 */
+            color: #1f2937; /* gray-800 */
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .user-bubble {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-options button {
+            background-color: #ffffff;
+            border: 1px solid #3b82f6; /* blue-500 */
+            color: #3b82f6; /* blue-500 */
+            padding: 8px 16px;
+            border-radius: 18px;
+            margin: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 0.9rem; /* Slightly smaller font for more buttons */
+        }
+        .chat-options button:hover {
+            background-color: #eff6ff; /* blue-50 */
+        }
+        .chat-options button:disabled {
+            background-color: #e5e7eb;
+            color: #9ca3af;
+            border-color: #d1d5db;
+            cursor: not-allowed;
+        }
+        /* Simple phone frame */
+        .phone-frame {
+            width: 375px; /* iPhone SE width */
+            height: 667px; /* iPhone SE height */
+            border: 8px solid #1f2937; /* Dark border */
+            border-radius: 36px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            background-color: #f9fafb; /* gray-50 */
+            display: flex;
+            flex-direction: column;
+            margin: 20px auto; /* Center frame */
+        }
+        .chat-screen {
+            flex-grow: 1;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-input-area {
+            border-top: 1px solid #e5e7eb;
+            padding: 10px;
+            background-color: #f9fafb; /* gray-50 */
+        }
+        .chat-options {
+             display: flex;
+             flex-wrap: wrap;
+             justify-content: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex justify-center items-center min-h-screen">
+
+    <div class="phone-frame">
+        <div id="chat-screen" class="chat-screen">
+            </div>
+
+        <div class="chat-input-area">
+            <div id="chat-options" class="chat-options">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Chat Simulation Logic ---
+        const chatScreen = document.getElementById('chat-screen');
+        const chatOptions = document.getElementById('chat-options');
+        let order = {}; // Object to store order details
+        let currentStep = 0;
+
+        // --- Message Display Functions ---
+        function addMessage(text, sender = 'bot') {
+            const bubble = document.createElement('div');
+            bubble.classList.add('chat-bubble');
+            bubble.classList.add(sender === 'bot' ? 'bot-bubble' : 'user-bubble');
+            bubble.textContent = text;
+            chatScreen.appendChild(bubble);
+            // Scroll to bottom
+            chatScreen.scrollTop = chatScreen.scrollHeight;
+        }
+
+        function showOptions(options) {
+            chatOptions.innerHTML = ''; // Clear previous options
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option.text;
+                // Store data associated with the option if needed
+                button.dataset.value = option.value || option.text;
+                if (option.nextStep !== undefined) { // Check if nextStep is defined
+                    button.dataset.nextStep = option.nextStep;
+                }
+                button.onclick = () => handleOptionClick(option);
+                chatOptions.appendChild(button);
+            });
+        }
+
+        function disableOptions() {
+             const buttons = chatOptions.querySelectorAll('button');
+             buttons.forEach(button => button.disabled = true);
+        }
+
+        // --- Chat Flow Steps ---
+        const chatFlow = [
+            // Step 0: Welcome & Coffee Type
+            {
+                message: "Hej! 👋 Velkommen til KaffeBot. Hvilken kaffe har du lyst til i dag?",
+                options: [
+                    { text: "Cappuccino", nextStep: 1 },
+                    { text: "Latte", nextStep: 1 },
+                    { text: "Espresso", nextStep: 1 },
+                    { text: "Sort Kaffe", nextStep: 1 }
+                ],
+                action: (option) => { order.type = option.text; }
+            },
+            // Step 1: Size
+            {
+                message: () => `Super! En ${order.type}. Hvilken størrelse?`, // Dynamic message
+                options: [
+                    { text: "Lille", nextStep: 2 },
+                    { text: "Mellem", nextStep: 2 },
+                    { text: "Stor", nextStep: 2 }
+                ],
+                 action: (option) => { order.size = option.text; }
+            },
+             // Step 2: Time
+            {
+                message: "Hvornår vil du hente den?",
+                options: [
+                    { text: "Om 5 min", value: "5min", nextStep: 3 },
+                    { text: "Om 10 min", value: "10min", nextStep: 3 },
+                    { text: "12:30", value: "12:30", nextStep: 3 }
+                ],
+                 action: (option) => { order.time = option.text; }
+            },
+             // Step 3: Location (Simulated) & Payment Prompt
+            {
+                message: () => `Perfekt. Din ${order.size} ${order.type} vil være klar ${order.time} ved Café Katrinebjerg. Vælg betalingsmetode:`,
+                options: [
+                     // Go directly to payment options step
+                    { text: "Vælg betaling", nextStep: 4 }
+                ],
+                 action: (option) => { order.location = "Café Katrinebjerg"; } // Simulate location
+            },
+             // Step 4: Payment Method Selection
+            {
+                message: "Vælg hvordan du vil betale (simulation):",
+                options: [
+                    // Simulate clickable payment options
+                    { text: "Betal med MobilePay", value: "MobilePay", nextStep: 5 },
+                    { text: "Betal med Apple Pay", value: "ApplePay", nextStep: 5 },
+                    { text: "Betal med Google Pay", value: "GooglePay", nextStep: 5 }
+                ],
+                 action: (option) => { order.paymentMethod = option.value; } // Store chosen method (optional)
+            },
+             // Step 5: Confirmation
+            {
+                message: () => `Betaling (${order.paymentMethod}) modtaget! 🎉 Din ${order.size} ${order.type} er klar til afhentning ${order.time} ved ${order.location}. Vis denne besked ved afhentning. Du har optjent 10 point (Total: 120 point).`, // Added loyalty points & payment method
+                options: [
+                     { text: "Start forfra", nextStep: 0 } // Option to restart
+                ],
+                 action: (option) => { if(option.nextStep === 0) order = {}; } // Reset order if starting over
+            }
+        ];
+
+        // --- Event Handler ---
+        function handleOptionClick(option) {
+            addMessage(option.text, 'user'); // Show user's choice
+            disableOptions(); // Disable buttons after selection
+
+            // Perform action associated with the step
+            const currentStepConfig = chatFlow[currentStep];
+            if (currentStepConfig.action) {
+                currentStepConfig.action(option);
+            }
+
+            // Move to the next step
+            if (option.nextStep !== undefined) {
+                currentStep = option.nextStep;
+                 // Add a small delay before the bot replies for realism
+                setTimeout(runStep, 500);
+            }
+        }
+
+        // --- Initialize Chat ---
+        function runStep() {
+            if (currentStep < chatFlow.length) {
+                const step = chatFlow[currentStep];
+                // Handle dynamic messages
+                const messageText = typeof step.message === 'function' ? step.message() : step.message;
+                addMessage(messageText, 'bot');
+
+                // Ensure options are defined before showing them
+                if (step.options && step.options.length > 0) {
+                   showOptions(step.options);
+                } else {
+                    // If no options, clear the options area
+                    chatOptions.innerHTML = '';
+                    // Potentially automatically move to the next step if it's just a message display
+                    // Or handle end-of-flow logic here
+                }
+            }
+        }
+
+
+        // Start the chat on load
+        runStep();
+
+    </script>
+
+</body>
+</html>
